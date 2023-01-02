@@ -14,12 +14,12 @@ if __name__ == '__main__':
     parser.add_argument("--dataset", type=str, default='Products-CL', help='Products-CL, Reddit-CL, Arxiv-CL, CoraFull-CL')
     parser.add_argument("--gpu", type=int, default=0, help="which GPU to use.")
     parser.add_argument("--seed", type=int, default=1, help="seed for exp")
-    parser.add_argument("--epochs", type=int, default=1, help="number of training epochs, default = 200")
+    parser.add_argument("--epochs", type=int, default=10, help="number of training epochs, default = 200")
     parser.add_argument("--lr", type=float, default=0.005, help="learning rate")
     parser.add_argument('--weight-decay', type=float, default=5e-4, help="weight decay")
     parser.add_argument('--backbone', type=str, default='GCN', help="backbone GNN, [GAT, GCN, GIN]")
     parser.add_argument('--method', type=str,
-                        choices=["bare", 'lwf', 'gem', 'ewc', 'mas', 'twp', 'jointtrain', 'ergnn', 'joint','Joint'], default="gem",
+                        choices=["bare", 'lwf', 'gem', 'ewc', 'mas', 'twp', 'jointtrain', 'ergnn', 'joint','Joint','subgraph'], default="gem",
                         help="baseline continual learning method")
     # parameters for continual learning settings
     parser.add_argument('--share-labels', type=strtobool, default=False,
@@ -62,7 +62,8 @@ if __name__ == '__main__':
     parser.add_argument('--sample_nbs', type=strtobool, default=True, help='whether to sample neighbors instead of using all')
     parser.add_argument('--n_nbs_sample', type=lambda x: [int(i) for i in x.replace(' ', '').split(',')], default=[10, 25], help='number of neighbors to sample per hop, use comma to separate the numbers when using the command line, e.g. 10,25 or 10, 25')
     parser.add_argument('--nb_sampler', default=None)
-    parser.add_argument('--replace_illegal_char', type=strtobool, default=False)
+    parser.add_argument('--sgreplay_args', type=str2dict, default={'sampler': 'random', 'c_node_budget': 10, 'nei_budget':[0,0], 'lambda':1})
+    parser.add_argument('--replace_illegal_char', type=strtobool, default=True)
     parser.add_argument('--ori_data_path', type=str, default='/store/data', help='the root path to raw data')
     parser.add_argument('--data_path', type=str, default='./data', help='the path to processed data (splitted into tasks)')
     parser.add_argument('--result_path', type=str, default='./results', help='the path for saving results')
@@ -74,7 +75,8 @@ if __name__ == '__main__':
     set_seed(args)
 
     method_args = {'ergnn': args.ergnn_args, 'lwf': args.lwf_args, 'twp': args.twp_args, 'ewc': args.ewc_args,
-                   'bare': args.bare_args, 'gem': args.gem_args, 'mas': args.mas_args, 'joint': args.joint_args}
+                   'bare': args.bare_args, 'gem': args.gem_args, 'mas': args.mas_args, 'joint': args.joint_args,
+                   'subgraph': args.sgreplay_args}
     backbone_args = {'GCN': args.GCN_args, 'GAT': args.GAT_args, 'GIN': args.GIN_args}
     hyp_param_list = compose_hyper_params(method_args[args.method])
     AP_best, name_best = 0, None
@@ -149,7 +151,7 @@ if __name__ == '__main__':
                 AP_best = np.mean(AP_dict[hyp_params_str])
                 hyp_best_str = hyp_params_str
                 name_best = name
-            print(f'best params is {hyp_best_str}, best AP is {AP_best}')
+                print(f'best params is {hyp_best_str}, best AP is {AP_best}')
             with open(f'{args.result_path}/{name}.pkl', 'wb') as f:
                 pickle.dump(acc_matrices, f)
 
@@ -165,4 +167,8 @@ if __name__ == '__main__':
             acc_matrices.append(acc_matrix_test)
         with open(f'{args.result_path}/{name_best}.pkl'.replace('val', 'te'), 'wb') as f:
             pickle.dump(acc_matrices, f)
+
+    show_performance_matrices(f'{args.result_path}/{name_best}.pkl'.replace('val', 'te'))
+    show_learning_curve(f'{args.result_path}/{name_best}.pkl'.replace('val', 'te'))
+    show_final_APAF(f'{args.result_path}/{name_best}.pkl'.replace('val', 'te'))
 

@@ -7,6 +7,8 @@ import os
 dir_home = os.getcwd()
 sys.path.append(os.path.join(dir_home,'continual_graph_learning/CGLB')) # for hpc usage
 sys.path.append(os.path.join(dir_home,'.local/lib/python3.7/site-packages')) # for hpc usage
+sys.path.append(os.path.join(dir_home,'../')) # for hpc usage
+sys.path.append(os.path.join(dir_home,'./')) # for hpc usage
 from NCGL.visualize import *
 
 
@@ -25,7 +27,7 @@ if __name__ == '__main__':
     parser.add_argument('--clsIL', type=strtobool, default=False)
     parser.add_argument('-p', '--pre-trained', action='store_true',
                         help='Whether to skip training and use a pre-trained model')
-    parser.add_argument('-g', '--gpu', type=int, default=1,
+    parser.add_argument('-g', '--gpu', type=int, default=0,
                         help="which GPU to use.")
 
     # parameters for different methods
@@ -49,7 +51,7 @@ if __name__ == '__main__':
     parser.add_argument('--frac_val', default=0.1)
     parser.add_argument('--frac_test', default=0.1)
     parser.add_argument('--repeats',type=int, default=2)
-    parser.add_argument('--replace_illegal_char', type=strtobool, default=False)
+    parser.add_argument('--replace_illegal_char', type=strtobool, default=True)
     parser.add_argument('--result_path', type=str, default='./results', help='the path for saving results')
     parser.add_argument('--overwrite_result', type=strtobool, default=True,
                         help='whether to overwrite existing results')
@@ -133,7 +135,7 @@ if __name__ == '__main__':
                 AP_best = np.mean(AP_dict[hyp_params_str])
                 hyp_best_str = hyp_params_str
                 name_best = name
-            print(f'best params is {hyp_best_str}, best AP is {AP_best}')
+                print(f'best params is {hyp_best_str}, best AP is {AP_best}')
             with open(f"{args['result_path']}/{name}.pkl", 'wb') as f:
                 pickle.dump(acc_matrices, f)
 
