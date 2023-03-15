@@ -7,8 +7,6 @@ import os
 dir_home = os.getcwd()
 sys.path.append(os.path.join(dir_home,'continual_graph_learning/CGLB')) # for hpc usage
 sys.path.append(os.path.join(dir_home,'.local/lib/python3.7/site-packages')) # for hpc usage
-sys.path.append(os.path.join(dir_home,'../')) # for hpc usage
-sys.path.append(os.path.join(dir_home,'./')) # for hpc usage
 from NCGL.visualize import *
 
 
@@ -21,13 +19,14 @@ if __name__ == '__main__':
     parser.add_argument('--backbone', type=str, default='GCN', choices=['CusGCN','GCN', 'GAT', 'Weave', 'HPNs'],
                         help='Model to use')
     parser.add_argument('--method', type=str, choices=['bare', 'lwf', 'gem', 'ewc', 'mas', 'twp', 'jointtrain'],
-                        default='twp', help='Method to use')
-    parser.add_argument('-d', '--dataset', type=str, choices=['SIDER-tIL','Tox21-tIL','Aromaticity-CL'], default='Aromaticity-CL',
+                        default='jointtrain', help='Method to use')
+    parser.add_argument('-d', '--dataset', type=str, choices=['SIDER-tIL','Tox21-tIL','Aromaticity-CL','UCLA'], default='SIDER-tIL',
                         help='Dataset to use')
+    parser.add_argument('--UCLA_graph_type', type=str, choices= ["one feature","multiple feature"],default='multiple feature')
     parser.add_argument('--clsIL', type=strtobool, default=False)
     parser.add_argument('-p', '--pre-trained', action='store_true',
                         help='Whether to skip training and use a pre-trained model')
-    parser.add_argument('-g', '--gpu', type=int, default=0,
+    parser.add_argument('-g', '--gpu', type=int, default=1,
                         help="which GPU to use.")
 
     # parameters for different methods
@@ -44,14 +43,14 @@ if __name__ == '__main__':
     parser.add_argument('--alpha_dis', type=float, default=0.1)
     parser.add_argument('--classifier_increase',default=False,help='this is deprecated, no effect at all')
     #parser.add_argument('--n_cls_per_task', default=1)
-    parser.add_argument('--num_epochs',type=int,default=2)
+    parser.add_argument('--num_epochs',type=int,default=100)
     parser.add_argument('--batch_size',type=int,default=128)
     parser.add_argument('--threshold_pubchem', default=20)
     parser.add_argument('--frac_train', default=0.8)
     parser.add_argument('--frac_val', default=0.1)
     parser.add_argument('--frac_test', default=0.1)
     parser.add_argument('--repeats',type=int, default=2)
-    parser.add_argument('--replace_illegal_char', type=strtobool, default=True)
+    parser.add_argument('--replace_illegal_char', type=strtobool, default=False)
     parser.add_argument('--result_path', type=str, default='./results', help='the path for saving results')
     parser.add_argument('--overwrite_result', type=strtobool, default=True,
                         help='whether to overwrite existing results')
@@ -117,7 +116,7 @@ if __name__ == '__main__':
                                 f"{args['result_path']}/log.txt", 'a') as f:
                             f.write(name)
                             f.write('\nAP:{},AF:{}\n'.format(AP, AF))
-                except Exception as e:
+                except EOFError as e:
                     mkdir_if_missing(f"{args['result_path']}/errors/" + subfolder)
                     if ite > 0:
                         name_ = f"{subfolder}val_{args['dataset']}_{args['n_cls_per_task']}_{args['method']}_{list(hyp_params.values())}_{args['backbone']}_{args['gcn_hidden_feats']}_{args['classifier_increase']}_bs{args['batch_size']}_{args['num_epochs']}_{ite}"
@@ -135,7 +134,7 @@ if __name__ == '__main__':
                 AP_best = np.mean(AP_dict[hyp_params_str])
                 hyp_best_str = hyp_params_str
                 name_best = name
-                print(f'best params is {hyp_best_str}, best AP is {AP_best}')
+            print(f'best params is {hyp_best_str}, best AP is {AP_best}')
             with open(f"{args['result_path']}/{name}.pkl", 'wb') as f:
                 pickle.dump(acc_matrices, f)
 
@@ -151,4 +150,6 @@ if __name__ == '__main__':
     with open(f"{args['result_path']}/{name_best}.pkl".replace('val', 'te'), 'wb') as f:
         pickle.dump(acc_matrices, f)
 
-
+    show_performance_matrices(f'{args["result_path"]}/{name_best}.pkl'.replace('val', 'te'))
+    show_learning_curve(f'{args["result_path"]}/{name_best}.pkl'.replace('val', 'te'))
+    show_final_APAF(f'{args["result_path"]}/{name_best}.pkl'.replace('val', 'te'))
